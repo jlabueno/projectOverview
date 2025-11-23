@@ -105,6 +105,23 @@ button:hover {
   transform: translateY(-1px);
 }
 
+.button--secondary {
+  margin-top: 0;
+  border: 1px solid var(--primary);
+  background: white;
+  color: var(--primary);
+}
+
+.button--secondary:hover {
+  background: rgba(56, 67, 208, 0.08);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .panel__hint {
   margin-top: 1rem;
   color: var(--muted);
@@ -132,6 +149,11 @@ button:hover {
 .results.hidden,
 .status.hidden {
   display: none;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .result-block {

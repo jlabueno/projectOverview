@@ -10,6 +10,7 @@ Inspect any public GitHub repository from the browser without extra infrastructu
 - **Outbound APIs** – scans sampled files for hard-coded `http(s)` URLs plus their surrounding snippets.
 - **Exposed endpoints** – heuristically detects common route declarations (Express, FastAPI, Flask, Django, etc.).
 - **Progress log** – live status panel detailing each step and any API/rate-limit issues.
+- **One-click PDF report** – export the current analysis snapshot as a portable summary.
 
 ## Getting started
 
@@ -35,6 +36,7 @@ The Compose stack builds the `nginx:alpine`-based image defined in `Dockerfile` 
 2. Enter a GitHub URL (`https://github.com/org/project`) or `owner/repo` slug.
 3. (Optional) Provide a personal access token if you expect to exceed unauthenticated rate limits or need access to private repos. Tokens stay in the browser.
 4. Click **Analyze repository** and watch the progress log for each API call.
+5. (Optional) After results render, click **Download PDF summary** to save a snapshot report.
 
 ## Implementation notes
 
