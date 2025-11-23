@@ -48,7 +48,25 @@
         </p>
       </section>
 
-      <section id="status" class="status hidden"></section>
+      <section id="status-panel" class="status hidden">
+        <div class="status__header">
+          <div>
+            <strong>Status log</strong>
+            <p class="muted status__hint">Shows step-by-step analyzer messages.</p>
+          </div>
+          <button id="toggle-log" type="button" class="button button--secondary button--compact">
+            Minimize
+          </button>
+        </div>
+        <div id="status-log" class="status__body"></div>
+      </section>
+
+      <section id="progress" class="progress hidden">
+        <div class="progress__track">
+          <div id="progress-value" class="progress__value"></div>
+        </div>
+        <p id="progress-label" class="progress__label">Idle</p>
+      </section>
       <section class="actions">
         <button id="export-pdf" type="button" class="button button--secondary" disabled>
           Download PDF summary
