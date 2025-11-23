@@ -41,9 +41,7 @@ export async function generateAnalysisPdf(analysis) {
             <h1>GitHub Project Analyzer</h1>
             <p>Generated ${new Date().toLocaleString()}</p>
           </header>
-          <section class="results">
-            ${markup}
-          </section>
+          ${markup}
         </main>
       </body>
     </html>
