@@ -13,7 +13,7 @@ const progressPanel = document.getElementById("progress");
 const progressValue = document.getElementById("progress-value");
 const progressLabel = document.getElementById("progress-label");
 let lastAnalysis = null;
-let isLogMinimized = false;
+let isLogMinimized = true;
 let totalFilesForProgress = 0;
 let inspectedFiles = 0;
 let currentProgressValue = 0;
@@ -96,6 +96,8 @@ function logStatus(message, level = "info") {
 function resetStatus() {
   statusPanel.classList.remove("hidden");
   statusBody.innerHTML = "";
+  statusBody.classList.toggle("status__body--minimized", isLogMinimized);
+  toggleLogButton.textContent = isLogMinimized ? "Expand" : "Minimize";
 }
 
 function resetProgress() {
