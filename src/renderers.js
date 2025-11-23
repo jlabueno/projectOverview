@@ -5,7 +5,11 @@ const percentFormat = new Intl.NumberFormat(undefined, {
 
 export function renderAnalysis(container, data) {
   container.classList.remove("hidden");
-  container.innerHTML = `
+  container.innerHTML = buildAnalysisMarkup(data);
+}
+
+export function buildAnalysisMarkup(data) {
+  return `
     ${renderRepositorySummary(data.repo, data.meta)}
     ${renderLanguages(data.languages)}
     ${renderStructure(data.structure)}

@@ -36,7 +36,7 @@ The Compose stack builds the `nginx:alpine`-based image defined in `Dockerfile` 
 2. Enter a GitHub URL (`https://github.com/org/project`) or `owner/repo` slug.
 3. (Optional) Provide a personal access token if you expect to exceed unauthenticated rate limits or need access to private repos. Tokens stay in the browser.
 4. Click **Analyze repository** and watch the progress log for each API call.
-5. (Optional) After results render, click **Download PDF summary** to save a snapshot report.
+5. (Optional) After results render, click **Download PDF summary**. A new browser window opens the existing layout and triggers the print dialog so you can “Save as PDF”. Be sure to allow pop-ups for this site.
 
 ## Implementation notes
 
