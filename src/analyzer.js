@@ -68,6 +68,7 @@ export async function analyzeRepository(input, token, onProgress = () => {}) {
   onProgress(`Scanned ${tree.length.toLocaleString()} files from git tree`);
 
   const structure = summarizeStructure(tree);
+  const formattedLanguages = formatLanguages(languages);
   const candidateFiles = selectFilesForAnalysis(tree);
   onProgress(`Inspecting ${candidateFiles.length} source files for classes and API usage...`);
 
@@ -93,9 +94,9 @@ export async function analyzeRepository(input, token, onProgress = () => {}) {
       openIssues: repoInfo.open_issues_count,
       defaultBranch
     },
-    languages: formatLanguages(languages),
+    languages: formattedLanguages,
     structure,
-    architecture: buildArchitecture(structure, languages, repoInfo.full_name),
+    architecture: buildArchitecture(structure, formattedLanguages, repoInfo.full_name),
     classes: {
       total: codeStats.totalClasses,
       files: codeStats.classDetails
@@ -266,7 +267,7 @@ function summarizeStructure(tree) {
   };
 }
 
-function buildArchitecture(structure, languages, repoName) {
+function buildArchitecture(structure, languages = [], repoName) {
   const components = structure.directories
     .slice()
     .sort((a, b) => b.files - a.files)
@@ -281,7 +282,7 @@ function buildArchitecture(structure, languages, repoName) {
   return {
     repo: {
       name: repoName,
-      languages: languages.slice(0, 4).map((lang) => lang.language)
+      languages: (languages || []).slice(0, 4).map((lang) => lang.language)
     },
     components
   };
