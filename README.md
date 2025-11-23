@@ -43,17 +43,18 @@ The Compose stack builds the `nginx:alpine`-based image defined in `Dockerfile` 
 
 ## Diagram assistant (chunk → embed → retrieve → generate)
 
-1. Run an analysis; the **Diagram assistant** panel appears below the results.
-2. Enter a request such as “Generate a sequence diagram for user login” and submit.
-   - On the first run per repo the app performs:
-     - **Chunking:** downloads the sampled files (up to 60) and splits them into semantic blocks (functions/classes/doc sections).
-     - **Embedding & Index:** loads the open-source `Xenova/all-MiniLM-L6-v2` embedding model (via `@xenova/transformers`), generates vectors locally, and persists them in browser storage as a lightweight vector DB.
-3. For every question it then executes:
-   - **Retrieval:** embeds the query, finds the top-k relevant chunks, and notes other discovered components/features.
-   - **LLM generation:** feeds the retrieved context into a local `Xenova/phi-2` text-generation pipeline to produce Mermaid (preferred) or PlantUML code. If the LLM cannot load, a heuristic fallback outputs a best-effort sequence diagram.
-4. Copy the generated snippet and paste it into draw.io using **Arrange → Insert → Mermaid**, following the [draw.io “diagrams from code” workflow](https://www.drawio.com/blog/diagrams-from-code).
+1. Run an analysis; after the results render the assistant automatically asks two RAG questions:
+   - “Generate the Architecture Overview Diagram”
+   - “Generate the Sequence Diagram”
+2. On the first run per repo the app performs:
+   - **Chunking:** downloads the sampled files (up to 60) and splits them into semantic blocks (functions/classes/doc sections).
+   - **Embedding & Index:** loads the open-source `Xenova/all-MiniLM-L6-v2` embedding model (via `@xenova/transformers`), generates vectors locally, and persists them in browser storage as a lightweight vector DB tied to `<owner>/<repo>@<branch>`.
+3. For each preset question it then executes:
+   - **Retrieval:** embeds the query, finds the top-k relevant chunks, and augments them with architecture features derived from the analysis.
+   - **LLM generation:** feeds the retrieved context into a local `Xenova/phi-2` text-generation pipeline to produce Mermaid (preferred) or PlantUML code grounded in the GitHub analysis. If the LLM cannot load, a heuristic fallback emits a best-effort sequence diagram summarizing the components.
+4. Review the generated snippets (sources and scores are shown for transparency) and copy them into draw.io via **Arrange → Insert → Mermaid**, following the [draw.io “diagrams from code” workflow](https://www.drawio.com/blog/diagrams-from-code).
 
-> **Tip:** The first embedding/LLM download can take a minute and uses your device’s CPU/GPU. Subsequent runs reuse the cached models and stored index.
+> **Tip:** The first embedding/LLM download can take a minute and uses your device’s CPU/GPU. Subsequent runs reuse the cached models and stored index, so diagram generation becomes near-instant.
 
 ## Implementation notes
 

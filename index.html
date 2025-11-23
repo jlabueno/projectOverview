@@ -74,32 +74,6 @@
       </section>
       <section id="results" class="results hidden"></section>
 
-      <section id="diagram-panel" class="rag-panel hidden">
-        <h2>Diagram assistant</h2>
-        <p class="muted">
-          Build semantic chunks, embed them locally, and query a self-hosted model to obtain draw.io-ready diagram code.
-          The first run may take a while as models are downloaded and indexed.
-        </p>
-        <form id="diagram-form" class="rag-panel__form">
-          <label for="diagram-question">Question or request</label>
-          <textarea
-            id="diagram-question"
-            name="diagram-question"
-            rows="3"
-            placeholder="Example: Generate a sequence diagram for user login"
-            required
-          ></textarea>
-          <div class="rag-panel__actions">
-            <button type="submit" class="button">Generate diagram</button>
-            <button type="button" id="clear-diagram" class="button button--secondary button--compact">
-              Clear output
-            </button>
-          </div>
-        </form>
-        <div id="diagram-output" class="diagram-output">
-          <p class="muted">Run a query to see generated Mermaid / PlantUML snippets.</p>
-        </div>
-      </section>
     </main>
 
     <script type="module" src="./src/app.js"></script>

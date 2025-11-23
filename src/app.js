@@ -17,11 +17,6 @@ const toggleLogButton = document.getElementById("toggle-log");
 const resultsBox = document.getElementById("results");
 const submitButton = form.querySelector("button[type='submit']");
 const pdfButton = document.getElementById("export-pdf");
-const diagramPanel = document.getElementById("diagram-panel");
-const diagramForm = document.getElementById("diagram-form");
-const diagramQuestion = document.getElementById("diagram-question");
-const diagramOutput = document.getElementById("diagram-output");
-const diagramClearButton = document.getElementById("clear-diagram");
 const progressPanel = document.getElementById("progress");
 const progressValue = document.getElementById("progress-value");
 const progressLabel = document.getElementById("progress-label");
@@ -32,7 +27,11 @@ let inspectedFiles = 0;
 let currentProgressValue = 0;
 let lastToken = "";
 let ragIndex = null;
-let ragIndexKey = "";
+
+const PRESET_DIAGRAM_QUERIES = [
+  { id: "architecture", label: "Architecture Overview Diagram", question: "Generate the Architecture Overview Diagram" },
+  { id: "sequence", label: "Sequence Diagram", question: "Generate the Sequence Diagram" }
+];
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -49,11 +48,9 @@ form.addEventListener("submit", async (event) => {
   submitButton.disabled = true;
   submitButton.textContent = "Analyzing…";
   pdfButton.disabled = true;
-  diagramPanel.classList.add("hidden");
-  diagramOutput.innerHTML = `<p class="muted">Run a query to see generated Mermaid / PlantUML snippets.</p>`;
   ragIndex = null;
-  ragIndexKey = "";
   lastToken = token;
+  removeAutoDiagramSection();
 
   try {
     const analysis = await analyzeRepository(repoUrl, token, handleProgressEvent);
@@ -64,15 +61,13 @@ form.addEventListener("submit", async (event) => {
     attachCopyHandlers(resultsBox);
     lastAnalysis = analysis;
     pdfButton.disabled = false;
-    diagramPanel.classList.remove("hidden");
-    diagramOutput.innerHTML = `<p class="muted">Enter a question to generate Mermaid / PlantUML diagram code.</p>`;
+    await generatePresetDiagrams(analysis);
   } catch (error) {
     console.error(error);
     logStatus(error.message || "Unable to analyze repository.", "error");
     failProgress(error.message);
     lastAnalysis = null;
     pdfButton.disabled = true;
-    diagramPanel.classList.add("hidden");
   } finally {
     submitButton.disabled = false;
     submitButton.textContent = "Analyze repository";
@@ -101,40 +96,6 @@ toggleLogButton.addEventListener("click", () => {
   statusBody.classList.toggle("status__body--minimized", isLogMinimized);
   toggleLogButton.textContent = isLogMinimized ? "Expand" : "Minimize";
   statusBody.scrollTop = statusBody.scrollHeight;
-});
-
-diagramForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (!lastAnalysis) {
-    logStatus("Run an analysis before requesting diagrams.", "error");
-    return;
-  }
-  const question = diagramQuestion.value.trim();
-  if (!question) return;
-
-  try {
-    const index = await ensureRagIndex();
-    logStatus("Retrieving semantic chunks…");
-    const context = await retrieveContext(question, index, 4);
-    logStatus("Generating diagram description…");
-    const features = describeFeatures(lastAnalysis);
-    const generation = await generateDiagramDescription({
-      question,
-      contextChunks: context,
-      features,
-      analysisSummary: describeAnalysis(lastAnalysis)
-    });
-    renderDiagramOutput({ generation, context });
-    logStatus("Diagram generated.");
-  } catch (error) {
-    console.error(error);
-    logStatus(error.message || "Unable to generate diagram.", "error");
-  }
-});
-
-diagramClearButton.addEventListener("click", () => {
-  diagramQuestion.value = "";
-  diagramOutput.innerHTML = `<p class="muted">Output cleared.</p>`;
 });
 
 function handleProgressEvent(message) {
@@ -235,7 +196,6 @@ async function ensureRagIndex() {
   if (ragIndex && ragIndex.key === key) return ragIndex;
 
   ragIndex = await loadIndex(key);
-  ragIndexKey = key;
   if (ragIndex) {
     logStatus("Loaded cached semantic index.");
     return ragIndex;
@@ -254,37 +214,82 @@ async function ensureRagIndex() {
   return ragIndex;
 }
 
-function renderDiagramOutput({ generation, context }) {
-  if (!generation) {
-    diagramOutput.innerHTML = `<p class="muted">No result generated.</p>`;
-    return;
-  }
-  const sources = context
-    .map(
-      (entry) =>
-        `<li>${entry.chunk.path} <span class="muted">(score ${entry.score.toFixed(3)})</span></li>`
-    )
-    .join("");
-  const copyId = `diagram-${Date.now()}`;
-  diagramOutput.innerHTML = `
-    <div class="diagram-output__section">
-      <p class="muted">Model: ${generation.model} · ${
-        generation.usedLLM ? "LLM" : "Heuristic fallback"
-      }</p>
-      <pre class="diagram-output__code" id="${copyId}">${escapeHtml(generation.result)}</pre>
-      <button class="button button--secondary button--compact copy-button" data-copy-target="${copyId}">
-        Copy diagram code
-      </button>
-      <div class="diagram-output__sources">
-        <strong>Sources</strong>
-        <ul>${sources}</ul>
-      </div>
-    </div>
-  `;
-  attachCopyHandlers(diagramOutput);
+function escapeHtml(text) {
+  return (text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function escapeHtml(text) {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+async function generatePresetDiagrams(analysis) {
+  removeAutoDiagramSection();
+  if (!analysis) return;
+  try {
+    const index = await ensureRagIndex();
+    const features = describeFeatures(analysis);
+    const summary = describeAnalysis(analysis);
+    const outputs = [];
+    for (const query of PRESET_DIAGRAM_QUERIES) {
+      logStatus(`Generating: ${query.label}`);
+      const context = await retrieveContext(query.question, index, 4);
+      const generation = await generateDiagramDescription({
+        question: query.question,
+        contextChunks: context,
+        features,
+        analysisSummary: summary
+      });
+      outputs.push({ ...query, generation, context });
+    }
+    renderAutoDiagramSection(outputs);
+  } catch (error) {
+    console.error(error);
+    logStatus(error.message || "Unable to generate automated diagrams.", "error");
+  }
+}
+
+function renderAutoDiagramSection(diagrams) {
+  if (!diagrams.length) return;
+  const section = document.createElement("section");
+  section.className = "result-block";
+  section.id = "auto-diagram-section";
+  section.innerHTML = `
+    <h2>AI-generated diagrams</h2>
+    <p class="muted">Generated automatically via the semantic index: architecture overview and primary sequence flow.</p>
+    ${diagrams
+      .map((diagram) => {
+        const copyId = `${diagram.id}-diagram-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const sources = diagram.context
+          .map(
+            (entry) =>
+              `<li>${entry.chunk.path} <span class="muted">(score ${entry.score.toFixed(3)})</span></li>`
+          )
+          .join("");
+        return `
+          <div class="diagram-block">
+            <div class="diagram-block__header">
+              <strong>${diagram.label}</strong>
+              <button class="button button--secondary button--compact copy-button" data-copy-target="${copyId}">
+                Copy code
+              </button>
+            </div>
+            <textarea id="${copyId}" class="code-block" rows="12" readonly>${escapeHtml(
+              diagram.generation.result
+            )}</textarea>
+            <p class="muted">Model: ${diagram.generation.model} · ${
+          diagram.generation.usedLLM ? "LLM" : "Heuristic fallback"
+        }</p>
+            <div class="diagram-sources">
+              <strong>Sources</strong>
+              <ul>${sources}</ul>
+            </div>
+          </div>
+        `;
+      })
+      .join("")}
+  `;
+  resultsBox.appendChild(section);
+  attachCopyHandlers(section);
+}
+
+function removeAutoDiagramSection() {
+  const existing = document.getElementById("auto-diagram-section");
+  if (existing) existing.remove();
 }
 
