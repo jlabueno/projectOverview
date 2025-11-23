@@ -81,6 +81,8 @@ export async function analyzeRepository(input, token, onProgress = () => {}) {
     onProgress
   });
 
+  const architecture = buildArchitecture(structure, formattedLanguages, repoInfo.full_name, tree);
+
   return {
     repo: {
       owner,
@@ -96,7 +98,7 @@ export async function analyzeRepository(input, token, onProgress = () => {}) {
     },
     languages: formattedLanguages,
     structure,
-    architecture: buildArchitecture(structure, formattedLanguages, repoInfo.full_name, tree),
+    architecture,
     classes: {
       total: codeStats.totalClasses,
       files: codeStats.classDetails
