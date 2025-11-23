@@ -7,7 +7,7 @@ Inspect any public GitHub repository from the browser without extra infrastructu
 - **Language mix** – mirrors GitHub's `/languages` endpoint and shows share per language.
 - **Class counter** – fetches a representative sample of source files (up to 120, <200 KB each) and counts class-like constructs per file.
 - **Structure map** – highlights top-level directories, top extensions, and root files.
-- **Architecture diagram** – visualizes main building blocks plus their dominant languages/technologies.
+- **Architecture & workflow diagram** – highlights key building blocks, dominant stacks, and inferred user/page flow.
 - **Outbound APIs** – scans sampled files for hard-coded `http(s)` URLs plus their surrounding snippets.
 - **Exposed endpoints** – heuristically detects common route declarations (Express, FastAPI, Flask, Django, etc.).
 - **Progress log** – live status panel detailing each step and any API/rate-limit issues.

@@ -96,7 +96,7 @@ export async function analyzeRepository(input, token, onProgress = () => {}) {
     },
     languages: formattedLanguages,
     structure,
-    architecture: buildArchitecture(structure, formattedLanguages, repoInfo.full_name),
+    architecture: buildArchitecture(structure, formattedLanguages, repoInfo.full_name, tree),
     classes: {
       total: codeStats.totalClasses,
       files: codeStats.classDetails
@@ -267,7 +267,7 @@ function summarizeStructure(tree) {
   };
 }
 
-function buildArchitecture(structure, languages = [], repoName) {
+function buildArchitecture(structure, languages = [], repoName, tree = []) {
   const components = structure.directories
     .slice()
     .sort((a, b) => b.files - a.files)
@@ -276,16 +276,116 @@ function buildArchitecture(structure, languages = [], repoName) {
       name: dir.name,
       files: dir.files,
       technologies: dir.topExtensions.map((item) => mapExtensionToTech(item.extension)),
-      samples: dir.samples.slice(0, 2)
+      samples: dir.samples.slice(0, 2),
+      type: inferComponentType(dir.name)
     }));
+
+  const flow = buildWorkflow(components, extractPageWorkflow(tree));
 
   return {
     repo: {
       name: repoName,
       languages: (languages || []).slice(0, 4).map((lang) => lang.language)
     },
-    components
+    components,
+    workflow: flow
   };
+}
+
+function inferComponentType(name = "") {
+  const normalized = name.toLowerCase();
+  if (/(src|app|client|web|frontend|ui)/.test(normalized)) return "ui";
+  if (/(backend|server|api|functions|services)/.test(normalized)) return "api";
+  if (/(database|db|migrations|schema|models)/.test(normalized)) return "data";
+  if (/(docs|documentation|wiki)/.test(normalized)) return "docs";
+  if (/(public|assets|static)/.test(normalized)) return "assets";
+  if (/(supabase|infra|deploy|config)/.test(normalized)) return "infra";
+  return "misc";
+}
+
+function buildWorkflow(components = [], pages = []) {
+  const workflow = [];
+  pages.forEach((page) => {
+    workflow.push({
+      kind: "page",
+      title: page.title,
+      detail: page.route,
+      source: page.file
+    });
+  });
+
+  const addComponentToFlow = (type, label) => {
+    const component = components.find((entry) => entry.type === type);
+    if (!component) return;
+    workflow.push({
+      kind: "component",
+      title: label || component.name,
+      detail: component.technologies.slice(0, 3).join(", ") || "Mixed stack"
+    });
+  };
+
+  addComponentToFlow("api", "API / Services");
+  addComponentToFlow("infra", "Edge & config");
+  addComponentToFlow("data", "Database & migrations");
+
+  if (!workflow.length && components.length) {
+    workflow.push({
+      kind: "component",
+      title: components[0].name,
+      detail: components[0].technologies.slice(0, 3).join(", ")
+    });
+  }
+
+  return workflow.slice(0, 8);
+}
+
+function extractPageWorkflow(tree = []) {
+  const supported = new Set(["tsx", "jsx", "ts", "js"]);
+  const directories = /(src\/(?:pages|screens|routes|views|app)\/)(.+)/i;
+  const seen = new Set();
+  const pages = [];
+
+  for (const entry of tree) {
+    if (!entry?.path) continue;
+    const ext = getExtension(entry.path);
+    if (!supported.has(ext)) continue;
+    const match = entry.path.match(directories);
+    if (!match) continue;
+    const relative = match[2].replace(/\.[^.]+$/, "");
+    const cleanRoute = `/${relative.replace(/index$/i, "").replace(/\\/g, "/")}`
+      .replace(/\/+/g, "/")
+      .replace(/\/$/, "") || "/";
+    const title = toTitleCase(relative.split("/").pop()?.replace(/[-_]/g, " ") || "Page");
+    const key = `${title}-${cleanRoute}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    pages.push({
+      title,
+      route: cleanRoute || "/",
+      file: entry.path
+    });
+  }
+
+  if (!pages.length) {
+    const appFile = tree.find((entry) => /src\/App\.(tsx|ts|jsx|js)$/i.test(entry.path || ""));
+    if (appFile) {
+      pages.push({
+        title: "App Shell",
+        route: "/",
+        file: appFile.path
+      });
+    }
+  }
+
+  return pages.slice(0, 5);
+}
+
+function toTitleCase(value = "") {
+  return value
+    .split(/[\s-_]+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
 }
 
 function mapExtensionToTech(extension) {

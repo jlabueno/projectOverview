@@ -33,42 +33,78 @@ function renderArchitecture(architecture) {
   return `
     <section class="result-block">
       <h2>Architecture overview</h2>
-      <div class="architecture">
-        <div class="architecture__node architecture__node--root">
-          <h3>${architecture.repo.name}</h3>
-          <p class="muted">Key languages: ${architecture.repo.languages.join(", ") || "n/a"}</p>
-        </div>
-        <div class="architecture__branches">
-          ${architecture.components
-            .map(
-              (component) => `
-            <div class="architecture__branch">
-              <span class="architecture__line"></span>
-              <div class="architecture__node">
-                <h4>${component.name}</h4>
-                <p class="muted">${numberFormat.format(component.files)} files</p>
-                <div class="architecture__tech">
+      ${renderArchitectureBlocks(architecture)}
+      ${renderArchitectureWorkflow(architecture.workflow)}
+    </section>
+  `;
+}
+
+function renderArchitectureBlocks(architecture) {
+  return `
+    <div class="architecture">
+      <div class="architecture__node architecture__node--root">
+        <h3>${architecture.repo.name}</h3>
+        <p class="muted">Key languages: ${architecture.repo.languages.join(", ") || "n/a"}</p>
+      </div>
+      <div class="architecture__branches">
+        ${architecture.components
+          .map(
+            (component) => `
+              <div class="architecture__branch">
+                <span class="architecture__line"></span>
+                <div class="architecture__node">
+                  <h4>${component.name}</h4>
+                  <p class="muted">${numberFormat.format(component.files)} files</p>
+                  <div class="architecture__tech">
+                    ${
+                      component.technologies.length
+                        ? component.technologies
+                            .map((tech) => `<span class="pill pill--small">${tech}</span>`)
+                            .join("")
+                        : `<span class="pill pill--small">Mixed</span>`
+                    }
+                  </div>
                   ${
-                    component.technologies.length
-                      ? component.technologies
-                          .map((tech) => `<span class="pill pill--small">${tech}</span>`)
-                          .join("")
-                      : `<span class="pill pill--small">Mixed</span>`
+                    component.samples.length
+                      ? `<p class="mono architecture__samples">${component.samples.join("<br />")}</p>`
+                      : ""
                   }
                 </div>
-                ${
-                  component.samples.length
-                    ? `<p class="mono architecture__samples">${component.samples.join("<br />")}</p>`
-                    : ""
-                }
               </div>
-            </div>
-          `
-            )
-            .join("")}
-        </div>
+            `
+          )
+          .join("")}
       </div>
-    </section>
+    </div>
+  `;
+}
+
+function renderArchitectureWorkflow(workflow = []) {
+  if (!workflow.length) {
+    return `
+      <div class="architecture__flow">
+        <p class="muted">Workflow could not be inferred from the source files.</p>
+      </div>
+    `;
+  }
+
+  const steps = workflow
+    .map(
+      (step) => `
+        <div class="architecture__flow-step">
+          <span class="pill pill--small">${step.kind === "page" ? "Page" : "Component"}</span>
+          <strong>${step.title}</strong>
+          <p class="muted">${step.detail}</p>
+          ${step.source ? `<p class="mono">${step.source}</p>` : ""}
+        </div>
+      `
+    )
+    .join('<span class="architecture__arrow">→</span>');
+
+  return `
+    <div class="architecture__flow">
+      ${steps}
+    </div>
   `;
 }
 
