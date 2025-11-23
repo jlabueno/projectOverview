@@ -2,10 +2,6 @@ import { buildAnalysisMarkup } from "./renderers.js";
 
 export async function generateAnalysisPdf(analysis) {
   if (!analysis) throw new Error("No analysis data available. Run an analysis first.");
-  const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1024,height=768");
-  if (!printWindow) {
-    throw new Error("Popup blocked. Allow pop-ups for this site to export the PDF.");
-  }
 
   const styles = await fetchStyles();
   const markup = buildAnalysisMarkup(analysis);
@@ -49,21 +45,46 @@ export async function generateAnalysisPdf(analysis) {
             ${markup}
           </section>
         </main>
-        <script>
-          window.onload = function () {
-            setTimeout(function () {
-              window.print();
-              window.close();
-            }, 100);
-          };
-        </script>
       </body>
     </html>
   `;
 
-  printWindow.document.open();
-  printWindow.document.write(printHtml);
-  printWindow.document.close();
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.visibility = "hidden";
+  document.body.appendChild(iframe);
+
+  await new Promise((resolve, reject) => {
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        resolve();
+      } catch (error) {
+        reject(error);
+      } finally {
+        setTimeout(() => {
+          iframe.remove();
+        }, 500);
+      }
+    };
+
+    try {
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!doc) throw new Error("Unable to prepare print document.");
+      doc.open();
+      doc.write(printHtml);
+      doc.close();
+    } catch (error) {
+      iframe.remove();
+      reject(error);
+    }
+  });
 }
 
 async function fetchStyles() {
