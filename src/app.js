@@ -172,8 +172,12 @@ function attachCopyHandlers(container) {
       if (!target) return;
       try {
         const value = "value" in target ? target.value : target.textContent;
-        await navigator.clipboard.writeText(value || "");
-        logStatus(`Copied Mermaid snippet (${targetId}).`);
+        const success = await copyToClipboard(value || "", target);
+        if (success) {
+          logStatus(`Copied Mermaid snippet (${targetId}).`);
+        } else {
+          logStatus("Clipboard API unavailable. Select the text manually.", "error");
+        }
       } catch (error) {
         console.error(error);
         logStatus("Unable to copy to clipboard.", "error");
@@ -211,6 +215,33 @@ async function ensureRagIndex() {
 
 function escapeHtml(text) {
   return (text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+async function copyToClipboard(text, target) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (error) {
+    console.warn("Clipboard API failed, falling back to execCommand.", error);
+  }
+
+  if (target?.select) {
+    const selection = document.getSelection();
+    const previousRange = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    target.focus();
+    target.select();
+    const success = document.execCommand("copy");
+    if (previousRange) {
+      selection.removeAllRanges();
+      selection.addRange(previousRange);
+    } else if (selection) {
+      selection.removeAllRanges();
+    }
+    return success;
+  }
+  return false;
 }
 
 async function generatePresetDiagrams(analysis) {
