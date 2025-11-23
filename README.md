@@ -1,0 +1,53 @@
+# GitHub Project Analyzer
+
+Inspect any public GitHub repository from the browser without extra infrastructure. Paste a repository URL (or `owner/repo` slug) and the page will call the GitHub REST API directly to summarize languages, class declarations, folder structure, external API calls, and exposed HTTP routes.
+
+## Features
+
+- **Language mix** – mirrors GitHub's `/languages` endpoint and shows share per language.
+- **Class counter** – fetches a representative sample of source files (up to 120, <200 KB each) and counts class-like constructs per file.
+- **Structure map** – highlights top-level directories, top extensions, and root files.
+- **Outbound APIs** – scans sampled files for hard-coded `http(s)` URLs plus their surrounding snippets.
+- **Exposed endpoints** – heuristically detects common route declarations (Express, FastAPI, Flask, Django, etc.).
+- **Progress log** – live status panel detailing each step and any API/rate-limit issues.
+
+## Getting started
+
+```bash
+cd /Users/jlabueno/projectOverview
+npm run dev
+```
+
+This uses Python's built-in HTTP server to host the static files at `http://localhost:5173`. Any static server will work; you can also run `python3 -m http.server 5173` directly.
+
+## Docker & Compose
+
+```bash
+cd /Users/jlabueno/projectOverview
+docker compose up --build
+```
+
+The Compose stack builds the `nginx:alpine`-based image defined in `Dockerfile` and serves the site at `http://localhost:4173`. Hot reload is not enabled in this container; rebuild when you change source files.
+
+## Using the analyzer
+
+1. Open `http://localhost:5173` in your browser.
+2. Enter a GitHub URL (`https://github.com/org/project`) or `owner/repo` slug.
+3. (Optional) Provide a personal access token if you expect to exceed unauthenticated rate limits or need access to private repos. Tokens stay in the browser.
+4. Click **Analyze repository** and watch the progress log for each API call.
+
+## Implementation notes
+
+- Pure front-end app (vanilla JS modules). No build step or server code required.
+- Uses the GitHub REST API: `/repos`, `/languages`, `/git/trees`, and `/contents`.
+- Limits deep inspections to a manageable subset to reduce API churn and latency.
+- Class detection looks for `class`, `struct`, and similar keywords; it's heuristic.
+- External/exposed API detection relies on regexes for popular frameworks and may produce false positives/negatives—treat results as leads, not guarantees.
+- If the GitHub tree endpoint truncates very large repos, the UI warns that the snapshot is partial.
+
+## Future ideas
+
+- Add offline caching or worker-based concurrency controls.
+- Enrich endpoint detection with AST parsing per language.
+- Support downloadable JSON reports for CI or governance workflows.
+

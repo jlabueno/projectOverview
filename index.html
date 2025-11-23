@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GitHub Project Analyzer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="panel">
+        <div class="panel__header">
+          <h1>GitHub Project Analyzer</h1>
+          <p>
+            Inspect any public repository to understand its languages, class count, folder
+            structure, outbound API calls, and declared server endpoints.
+          </p>
+        </div>
+
+        <form id="repo-form" class="panel__form">
+          <label for="repo-url">Repository URL</label>
+          <input
+            id="repo-url"
+            name="repo-url"
+            type="url"
+            placeholder="https://github.com/org/project"
+            required
+          />
+
+          <label for="token">
+            GitHub token
+            <span class="label-hint">(optional, improves rate limits & private access)</span>
+          </label>
+          <input
+            id="token"
+            name="token"
+            type="password"
+            placeholder="ghp_..."
+            autocomplete="off"
+          />
+
+          <button type="submit">Analyze repository</button>
+        </form>
+
+        <p class="panel__hint">
+          Your token never leaves your browser. The analyzer calls the GitHub REST API directly
+          from this page.
+        </p>
+      </section>
+
+      <section id="status" class="status hidden"></section>
+      <section id="results" class="results hidden"></section>
+    </main>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
+

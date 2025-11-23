@@ -1,0 +1,8 @@
+services:
+  analyzer:
+    build:
+      context: .
+    ports:
+      - "4173:80"
+    restart: unless-stopped
+
