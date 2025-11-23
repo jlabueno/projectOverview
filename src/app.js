@@ -28,11 +28,6 @@ let currentProgressValue = 0;
 let lastToken = "";
 let ragIndex = null;
 
-const PRESET_DIAGRAM_QUERIES = [
-  { id: "architecture", label: "Architecture Overview Diagram", question: "Generate the Architecture Overview Diagram" },
-  { id: "sequence", label: "Sequence Diagram", question: "Generate the Sequence Diagram" }
-];
-
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const repoUrl = form.elements["repo-url"].value.trim();
@@ -225,8 +220,13 @@ async function generatePresetDiagrams(analysis) {
     const index = await ensureRagIndex();
     const features = describeFeatures(analysis);
     const summary = describeAnalysis(analysis);
+    const queries = buildDiagramQueries(analysis);
+    if (!queries.length) {
+      logStatus("No diagram queries generated.");
+      return;
+    }
     const outputs = [];
-    for (const query of PRESET_DIAGRAM_QUERIES) {
+    for (const query of queries) {
       logStatus(`Generating: ${query.label}`);
       const context = await retrieveContext(query.question, index, 4);
       const generation = await generateDiagramDescription({
@@ -291,5 +291,66 @@ function renderAutoDiagramSection(diagrams) {
 function removeAutoDiagramSection() {
   const existing = document.getElementById("auto-diagram-section");
   if (existing) existing.remove();
+}
+
+function buildDiagramQueries(analysis) {
+  if (!analysis) return [];
+  const repoName = analysis.repo?.fullName || `${analysis.repo?.owner}/${analysis.repo?.name}` || "this repository";
+  const languageSummary =
+    analysis.languages?.slice(0, 5).map((lang) => lang.language).join(", ") || "mixed stack";
+
+  const queries = [
+    {
+      id: "architecture",
+      label: "Architecture Overview Diagram",
+      question: `Generate an architecture overview Mermaid diagram for ${repoName}. Highlight the main building blocks (front-end, back-end services, infra, data stores) along with their dominant technologies and languages (${languageSummary}). Show external APIs and data flows between components. Use a graph/flow structure (graph TD) with descriptive labels.`
+    }
+  ];
+
+  const scenarios = buildSequenceScenarios(analysis.architecture?.workflow);
+  if (scenarios.length) {
+    scenarios.forEach((scenario, index) => {
+      const pathDescription = scenario.steps
+        .map((step) => `${step.title} (${step.kind}: ${step.detail})`)
+        .join(" -> ");
+      queries.push({
+        id: `sequence-${index}`,
+        label: scenario.label,
+        question: `Generate a detailed Mermaid sequence diagram for the user flow "${scenario.label}". The flow goes through: ${pathDescription}. Include the User actor, UI/page components, backend/services, and data stores referenced in the analysis. Show request/response interactions in order.`
+      });
+    });
+  } else {
+    queries.push({
+      id: "sequence-0",
+      label: "Primary User Flow Sequence",
+      question: `Generate a Mermaid sequence diagram showing the primary user access flow across the application (login/UI -> backend/API -> database/external services) for ${repoName}.`
+    });
+  }
+  return queries;
+}
+
+function buildSequenceScenarios(workflow = []) {
+  if (!workflow || !workflow.length) return [];
+  const scenarios = [];
+  let current = [];
+
+  workflow.forEach((step) => {
+    if (step.kind === "page") {
+      if (current.length) {
+        scenarios.push(current);
+      }
+      current = [step];
+    } else {
+      current.push(step);
+    }
+  });
+
+  if (current.length) scenarios.push(current);
+
+  return scenarios.map((steps, idx) => {
+    const page = steps.find((step) => step.kind === "page");
+    const label = page ? `${page.title} Flow` : `Flow ${idx + 1}`;
+    return { label, steps };
+  });
 }
 
