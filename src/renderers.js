@@ -13,10 +13,48 @@ export function buildAnalysisMarkup(data) {
     ${renderRepositorySummary(data.repo, data.meta)}
     ${renderLanguages(data.languages)}
     ${renderArchitecture(data.architecture)}
+    ${renderDiagramExports(data.diagrams)}
     ${renderStructure(data.structure)}
     ${renderClassStats(data.classes)}
     ${renderExternalApis(data.externalApis)}
     ${renderExposedApis(data.exposedApis)}
+  `;
+}
+
+function renderDiagramExports(diagrams) {
+  if (!diagrams || (!diagrams.overview && !diagrams.sequences?.length)) {
+    return "";
+  }
+
+  const sequencesMarkup = (diagrams.sequences || [])
+    .map((sequence, index) => renderMermaidBlock(sequence.mermaid, `sequence-${index}`, sequence.title))
+    .join("");
+
+  return `
+    <section class="result-block">
+      <h2>Draw.io / Mermaid exports</h2>
+      <p class="muted">
+        Paste these snippets via <strong>Arrange → Insert → Mermaid</strong> in draw.io to recreate the architecture
+        and workflow diagrams. You can then fine-tune or combine them with other diagram elements.
+      </p>
+      ${renderMermaidBlock(diagrams.overview, "architecture-overview", "Architecture overview")}
+      ${sequencesMarkup}
+    </section>
+  `;
+}
+
+function renderMermaidBlock(code, id, label) {
+  if (!code) return "";
+  return `
+    <div class="diagram-block">
+      <div class="diagram-block__header">
+        <strong>${label}</strong>
+        <button class="button button--secondary button--compact copy-button" data-copy-target="${id}">
+          Copy code
+        </button>
+      </div>
+      <textarea id="${id}" class="code-block" rows="12" readonly>${code}</textarea>
+    </div>
   `;
 }
 

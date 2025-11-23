@@ -40,6 +40,7 @@ form.addEventListener("submit", async (event) => {
     completeProgress();
     renderAnalysis(resultsBox, analysis);
     resultsBox.classList.remove("hidden");
+    attachCopyHandlers(resultsBox);
     lastAnalysis = analysis;
     pdfButton.disabled = false;
   } catch (error) {
@@ -146,5 +147,23 @@ function updateProgressFromMessage(message) {
     const value = 0.6 + Math.min(proportion, 1) * 0.35;
     setProgress(value, `Inspecting ${Math.min(inspectedFiles, totalFilesForProgress || inspectedFiles)}/${totalFilesForProgress || "?"}`);
   }
+}
+
+function attachCopyHandlers(container) {
+  const buttons = container.querySelectorAll(".copy-button[data-copy-target]");
+  buttons.forEach((button) => {
+    button.addEventListener("click", async () => {
+      const targetId = button.getAttribute("data-copy-target");
+      const textarea = container.querySelector(`#${targetId}`);
+      if (!textarea) return;
+      try {
+        await navigator.clipboard.writeText(textarea.value);
+        logStatus(`Copied Mermaid snippet (${targetId}).`);
+      } catch (error) {
+        console.error(error);
+        logStatus("Unable to copy to clipboard.", "error");
+      }
+    });
+  });
 }
 

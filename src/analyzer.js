@@ -107,7 +107,10 @@ export async function analyzeRepository(input, token, onProgress = () => {}) {
       analyzedFiles: candidateFiles.length,
       treeEntries: tree.length,
       generatedAt: new Date().toISOString()
-    }
+    },
+    diagrams: buildMermaidDiagrams({
+      architecture: architecture || null
+    })
   };
 }
 
@@ -289,6 +292,86 @@ function buildArchitecture(structure, languages = [], repoName, tree = []) {
     },
     components,
     workflow: flow
+  };
+}
+
+function buildMermaidDiagrams({ architecture }) {
+  if (!architecture) {
+    return {
+      overview: "",
+      sequences: []
+    };
+  }
+
+  return {
+    overview: buildOverviewDiagram(architecture),
+    sequences: [buildWorkflowSequence(architecture)]
+  };
+}
+
+function buildOverviewDiagram(architecture) {
+  const lines = [];
+  lines.push("graph TD");
+  lines.push(`    User((End User))`);
+  lines.push(
+    `    Repo["${architecture.repo.name}<br/>Languages: ${architecture.repo.languages.join(", ") || "n/a"}"]`
+  );
+  lines.push("    User --> Repo");
+
+  architecture.components.forEach((component, index) => {
+    const nodeId = `C${index}`;
+    const tech = component.technologies.slice(0, 3).join(", ") || "Mixed stack";
+    lines.push(
+      `    ${nodeId}["${component.name}<br/>${tech}<br/>${component.files.toLocaleString()} files"]`
+    );
+    lines.push(`    Repo --> ${nodeId}`);
+  });
+
+  return lines.join("\n");
+}
+
+function buildWorkflowSequence(architecture) {
+  const workflow = architecture.workflow || [];
+  const sequenceLines = ["sequenceDiagram", "    autonumber", "    participant U as User / Client"];
+
+  const participants = new Map();
+  const messages = [];
+  let lastId = "U";
+
+  workflow.forEach((step, index) => {
+    const id = `S${index}`;
+    const label =
+      step.kind === "page"
+        ? `${step.title}\\n${step.detail}`
+        : `${step.title}\\n${step.detail || ""}`;
+    participants.set(id, label);
+    messages.push({
+      from: lastId,
+      to: id,
+      text: step.kind === "page" ? `Navigate ${step.detail}` : `Invoke ${step.title}`
+    });
+    lastId = id;
+  });
+
+  if (!workflow.length) {
+    messages.push({
+      from: "U",
+      to: "Repo",
+      text: "Interact with application flow"
+    });
+  }
+
+  Array.from(participants.entries()).forEach(([id, label]) => {
+    sequenceLines.push(`    participant ${id} as ${label}`);
+  });
+
+  messages.forEach((message) => {
+    sequenceLines.push(`    ${message.from}->>${message.to}: ${message.text}`);
+  });
+
+  return {
+    title: "User workflow",
+    mermaid: sequenceLines.join("\n")
   };
 }
 
