@@ -266,6 +266,14 @@ async function fetchGitHubJson(path, token) {
     if (response.status === 403 && response.headers.get("x-ratelimit-remaining") === "0") {
       throw new Error("GitHub rate limit exceeded. Provide a personal access token to continue.");
     }
+    if (response.status === 404) {
+      throw new Error(
+        "Repository or resource not found. Double-check the owner/repo slug and ensure the token has access if the repo is private."
+      );
+    }
+    if (response.status === 401) {
+      throw new Error("GitHub rejected the token. Verify it is valid and has the required scopes.");
+    }
     throw new Error(`GitHub API error (${response.status}): ${message}`);
   }
   return response.json();
