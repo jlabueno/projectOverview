@@ -12,10 +12,63 @@ export function buildAnalysisMarkup(data) {
   return `
     ${renderRepositorySummary(data.repo, data.meta)}
     ${renderLanguages(data.languages)}
+    ${renderArchitecture(data.architecture)}
     ${renderStructure(data.structure)}
     ${renderClassStats(data.classes)}
     ${renderExternalApis(data.externalApis)}
     ${renderExposedApis(data.exposedApis)}
+  `;
+}
+
+function renderArchitecture(architecture) {
+  if (!architecture || !architecture.components.length) {
+    return `
+      <section class="result-block">
+        <h2>Architecture overview</h2>
+        <p class="muted">Could not derive major components from the repository structure.</p>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="result-block">
+      <h2>Architecture overview</h2>
+      <div class="architecture">
+        <div class="architecture__node architecture__node--root">
+          <h3>${architecture.repo.name}</h3>
+          <p class="muted">Key languages: ${architecture.repo.languages.join(", ") || "n/a"}</p>
+        </div>
+        <div class="architecture__branches">
+          ${architecture.components
+            .map(
+              (component) => `
+            <div class="architecture__branch">
+              <span class="architecture__line"></span>
+              <div class="architecture__node">
+                <h4>${component.name}</h4>
+                <p class="muted">${numberFormat.format(component.files)} files</p>
+                <div class="architecture__tech">
+                  ${
+                    component.technologies.length
+                      ? component.technologies
+                          .map((tech) => `<span class="pill pill--small">${tech}</span>`)
+                          .join("")
+                      : `<span class="pill pill--small">Mixed</span>`
+                  }
+                </div>
+                ${
+                  component.samples.length
+                    ? `<p class="mono architecture__samples">${component.samples.join("<br />")}</p>`
+                    : ""
+                }
+              </div>
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+      </div>
+    </section>
   `;
 }
 

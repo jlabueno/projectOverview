@@ -23,6 +23,34 @@ const MAX_FILE_SIZE_BYTES = 200_000;
 const FETCH_CONCURRENCY = 4;
 
 const httpMethodRegex = /(get|post|put|delete|patch|options|head)/i;
+const EXTENSION_TECH_MAP = {
+  tsx: "React/TSX",
+  ts: "TypeScript",
+  js: "JavaScript",
+  jsx: "React/JSX",
+  css: "CSS",
+  scss: "Sass",
+  html: "HTML",
+  md: "Markdown",
+  json: "JSON",
+  sql: "SQL",
+  py: "Python",
+  rb: "Ruby",
+  go: "Go",
+  java: "Java",
+  kt: "Kotlin",
+  cs: "C#",
+  php: "PHP",
+  sh: "Shell",
+  yml: "YAML",
+  yaml: "YAML",
+  dockerfile: "Docker",
+  toml: "TOML",
+  ico: "Assets",
+  svg: "SVG",
+  txt: "Text",
+  plpgsql: "PL/pgSQL"
+};
 
 export async function analyzeRepository(input, token, onProgress = () => {}) {
   const { owner, repo } = parseRepoInput(input);
@@ -67,6 +95,7 @@ export async function analyzeRepository(input, token, onProgress = () => {}) {
     },
     languages: formatLanguages(languages),
     structure,
+    architecture: buildArchitecture(structure, languages, repoInfo.full_name),
     classes: {
       total: codeStats.totalClasses,
       files: codeStats.classDetails
@@ -235,6 +264,33 @@ function summarizeStructure(tree) {
       .sort((a, b) => a.name.localeCompare(b.name)),
     rootFiles: rootFiles.sort((a, b) => a.localeCompare(b))
   };
+}
+
+function buildArchitecture(structure, languages, repoName) {
+  const components = structure.directories
+    .slice()
+    .sort((a, b) => b.files - a.files)
+    .slice(0, 6)
+    .map((dir) => ({
+      name: dir.name,
+      files: dir.files,
+      technologies: dir.topExtensions.map((item) => mapExtensionToTech(item.extension)),
+      samples: dir.samples.slice(0, 2)
+    }));
+
+  return {
+    repo: {
+      name: repoName,
+      languages: languages.slice(0, 4).map((lang) => lang.language)
+    },
+    components
+  };
+}
+
+function mapExtensionToTech(extension) {
+  if (!extension) return "Other";
+  const normalized = extension.toLowerCase();
+  return EXTENSION_TECH_MAP[normalized] || normalized.toUpperCase();
 }
 
 function formatLanguages(languages) {
