@@ -316,21 +316,33 @@ function buildOverviewDiagram(architecture) {
   const lines = [];
   lines.push("graph TD");
   lines.push(`    User((End User))`);
-  lines.push(
-    `    Repo["${architecture.repo.name}<br/>Languages: ${architecture.repo.languages.join(", ") || "n/a"}"]`
-  );
+  const repoLabel = formatMermaidLabel([
+    architecture.repo.name,
+    `Languages: ${architecture.repo.languages.join(", ") || "n/a"}`
+  ]);
+  lines.push(`    Repo["${repoLabel}"]`);
   lines.push("    User --> Repo");
 
   architecture.components.forEach((component, index) => {
     const nodeId = `C${index}`;
     const tech = component.technologies.slice(0, 3).join(", ") || "Mixed stack";
-    lines.push(
-      `    ${nodeId}["${component.name}<br/>${tech}<br/>${component.files.toLocaleString()} files"]`
-    );
+    const label = formatMermaidLabel([
+      component.name,
+      tech,
+      `${component.files.toLocaleString()} files`
+    ]);
+    lines.push(`    ${nodeId}["${label}"]`);
     lines.push(`    Repo --> ${nodeId}`);
   });
 
   return lines.join("\n");
+}
+
+function formatMermaidLabel(lines) {
+  return lines
+    .filter(Boolean)
+    .map((line) => line.replace(/["<>]/g, "").replace(/&/g, "and"))
+    .join("\\n");
 }
 
 function buildWorkflowSequence(architecture) {
