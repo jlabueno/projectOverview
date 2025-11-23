@@ -209,7 +209,7 @@ async function getEmbeddingPipeline() {
   if (!embeddingPipelinePromise) {
     const { pipeline, env } = await loadTransformers();
     env.allowLocalModels = false;
-    env.useBrowserCache = true;
+    env.useBrowserCache = supportsBrowserCache();
     embeddingPipelinePromise = pipeline("feature-extraction", DEFAULT_EMBEDDING_MODEL);
   }
   return embeddingPipelinePromise;
@@ -219,7 +219,7 @@ async function getGenerationPipeline() {
   if (!generationPipelinePromise) {
     const { pipeline, env } = await loadTransformers();
     env.allowLocalModels = false;
-    env.useBrowserCache = true;
+    env.useBrowserCache = supportsBrowserCache();
     generationPipelinePromise = pipeline("text-generation", DEFAULT_TEXT_MODEL);
   }
   return generationPipelinePromise;
@@ -336,5 +336,9 @@ function fallbackDiagram(question, chunks, features, analysisSummary) {
 function truncate(text, max) {
   if (!text || text.length <= max) return text;
   return `${text.slice(0, max)}…`;
+}
+
+function supportsBrowserCache() {
+  return typeof globalThis !== "undefined" && typeof globalThis.caches !== "undefined";
 }
 
