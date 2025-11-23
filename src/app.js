@@ -6,7 +6,8 @@ import {
   loadIndex,
   retrieveContext,
   generateDiagramDescription,
-  describeFeatures
+  describeFeatures,
+  describeAnalysis
 } from "./rag.js";
 
 const form = document.getElementById("repo-form");
@@ -120,7 +121,8 @@ diagramForm.addEventListener("submit", async (event) => {
     const generation = await generateDiagramDescription({
       question,
       contextChunks: context,
-      features
+      features,
+      analysisSummary: describeAnalysis(lastAnalysis)
     });
     renderDiagramOutput({ generation, context });
     logStatus("Diagram generated.");

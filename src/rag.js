@@ -77,8 +77,13 @@ export async function retrieveContext(question, index, topK = 4) {
   return scored;
 }
 
-export async function generateDiagramDescription({ question, contextChunks, features }) {
-  const prompt = buildDiagramPrompt(question, contextChunks, features);
+export async function generateDiagramDescription({
+  question,
+  contextChunks,
+  features,
+  analysisSummary
+}) {
+  const prompt = buildDiagramPrompt(question, contextChunks, features, analysisSummary);
   try {
     const generator = await getGenerationPipeline();
     const output = await generator(prompt, {
@@ -98,7 +103,7 @@ export async function generateDiagramDescription({ question, contextChunks, feat
     console.warn("Falling back to heuristic diagram", error);
     return {
       prompt,
-      result: fallbackDiagram(question, contextChunks, features),
+      result: fallbackDiagram(question, contextChunks, features, analysisSummary),
       model: "heuristic-template",
       usedLLM: false
     };
@@ -112,6 +117,50 @@ export function describeFeatures(analysis) {
     technologies: component.technologies.slice(0, 3),
     files: component.files
   }));
+}
+
+export function describeAnalysis(analysis) {
+  if (!analysis) return "No analysis summary available.";
+  const lines = [];
+  if (analysis.languages?.length) {
+    const langSummary = analysis.languages
+      .slice(0, 5)
+      .map((lang) => `${lang.language} (${lang.share.toFixed(1)}%)`)
+      .join(", ");
+    lines.push(`Languages: ${langSummary}`);
+  }
+  if (analysis.architecture?.components?.length) {
+    lines.push(
+      "Components:",
+      ...analysis.architecture.components.map(
+        (component) =>
+          `- ${component.name} (${component.technologies.slice(0, 3).join(", ") || "Mixed"})`
+      )
+    );
+  }
+  if (analysis.architecture?.workflow?.length) {
+    lines.push(
+      "Workflow:",
+      ...analysis.architecture.workflow.map(
+        (step, idx) => `${idx + 1}. ${step.title} (${step.kind}) - ${step.detail}`
+      )
+    );
+  }
+  if (analysis.externalApis?.length) {
+    lines.push(
+      "External APIs:",
+      ...analysis.externalApis.slice(0, 5).map((api) => `- ${api.method} ${api.url}`)
+    );
+  }
+  if (analysis.exposedApis?.length) {
+    lines.push(
+      "Exposed routes:",
+      ...analysis.exposedApis
+        .slice(0, 5)
+        .map((route) => `- ${route.method} ${route.endpoint} (${route.framework})`)
+    );
+  }
+  return lines.join("\n") || "No analysis summary available.";
 }
 
 function chunkSourceFile(content, path) {
@@ -201,7 +250,7 @@ function toFloat32Array(data) {
   return new Float32Array(data);
 }
 
-function buildDiagramPrompt(question, chunks, features) {
+function buildDiagramPrompt(question, chunks, features, analysisSummary = "") {
   const chunkText = chunks
     .map(
       (entry, idx) =>
@@ -222,6 +271,9 @@ code in a fenced block (mermaid preferred) and keep explanations concise.
 
 Question: ${question}
 
+Repository analysis summary:
+${analysisSummary}
+
 Component summary:
 ${featureText}
 
@@ -241,7 +293,7 @@ function sanitizeDiagramOutput(text) {
   return text.trim();
 }
 
-function fallbackDiagram(question, chunks, features) {
+function fallbackDiagram(question, chunks, features, analysisSummary) {
   const steps = features.slice(0, 4).map((feature, idx) => ({
     id: `F${idx + 1}`,
     label: feature.name,
@@ -274,7 +326,10 @@ function fallbackDiagram(question, chunks, features) {
     "```",
     "",
     "_Generated via heuristic fallback for request:_",
-    question
+    question,
+    "",
+    "Context:",
+    truncate(analysisSummary, 400)
   ].join("\n");
 }
 
