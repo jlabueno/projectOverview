@@ -112,7 +112,8 @@ export async function analyzeRepository(input, token, onProgress = () => {}) {
     },
     diagrams: buildMermaidDiagrams({
       architecture: architecture || null
-    })
+    }),
+    sampledFiles: candidateFiles
   };
 }
 
@@ -521,7 +522,7 @@ async function fetchGitHubJson(path, token) {
   return response.json();
 }
 
-async function fetchFileContent(owner, repo, path, ref, token) {
+export async function fetchFileContent(owner, repo, path, ref, token) {
   const encodedPath = path
     .split("/")
     .map((segment) => encodeURIComponent(segment))
