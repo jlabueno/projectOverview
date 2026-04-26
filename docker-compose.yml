@@ -5,4 +5,6 @@ services:
     ports:
       - "4173:80"
     restart: unless-stopped
+    environment:
+      - AUTOHEAL_INTERVAL=86400
 
