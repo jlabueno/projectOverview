@@ -5,6 +5,32 @@ services:
     ports:
       - "4173:80"
     restart: unless-stopped
-    environment:
-      - AUTOHEAL_INTERVAL=86400
+    labels:
+      - "overview.autoheal=true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
+      interval: 1h
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - overview-network
 
+  autoheal:
+    image: willfarrell/autoheal:latest
+    container_name: overview-autoheal
+    restart: unless-stopped
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=overview.autoheal
+      - AUTOHEAL_INTERVAL=86400
+      - AUTOHEAL_START_PERIOD=30
+      - AUTOHEAL_DEFAULT_STOP_TIMEOUT=10
+      - DOCKER_SOCK=/var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - overview-network
+
+networks:
+  overview-network:
+    driver: bridge
